@@ -1,0 +1,113 @@
+---
+title: "Data Wrangling 2"
+author: "Georgie Knight"
+date: "8 August 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+The titanic data set.
+
+## Dplyr and tidyr
+
+Load the _dplyr_ and _tidyr_ packages which will help us wrangle the data:
+
+```{r}
+library("dplyr")
+library("tidyr")
+```
+## Loading up the data
+
+Load the file 'refine_original.csv' into R:
+
+```{r}
+refine_original <- read.csv("titanic_original.csv")
+dt_fr <- data.frame(refine_original)
+```
+
+Convert it to a table  called 'titanic_table' within the dplyr package...
+
+```{r}
+titanic_table<-dplyr::tbl_df(dt_fr)
+```
+
+Take a quick look at it:
+```{r, echo = FALSE}
+titanic_table
+names(titanic_table)
+glimpse(titanic_table)
+```
+
+
+
+##Task 1:Replace missing values
+_The embarked column has some missing values, which are known to correspond to passengers who actually embarked at Southampton. Find the missing values and replace them with S_
+
+```{r}
+titanic_table$embarked
+levels(titanic_table$embarked)
+summary(titanic_table$embarked)
+```
+We see this is a factor data type it should an empty factor along with $C$, $Q$ or $S$. We'll have to change the empty factor to $S$. We'll do this first by duplicating it, This forces R to put all labels into the lesser value, then relabeling it which will remove the empty factor.
+
+```{r}
+titanic_table <- titanic_table %>% 
+  mutate(embarked = factor(embarked, labels=c('S','C','Q','S'))) %>%       
+  mutate(embarked = factor(embarked, labels=c('S','C','Q')))
+
+summary(titanic_table$embarked)
+```
+
+
+##Task 2: Repopulate the age column with the mean age
+_You'll notice that a lot of the values in the Age column are missing. While there are many ways to fill these missing values, using the mean or median of the rest of the values is quite common in such cases._
+
+We'll first get the average age.
+
+```{r}
+summarise(titanic_table,avg_age =mean(age, na.rm=TRUE))
+```
+
+then use the _replace_na_ function from _tidyr_ to fill in the NAs
+
+```{r}
+titanic_table <- titanic_table %>% replace_na(list(age = 29.88113))
+```
+we could have perhaps used the mean age rounded to the nearest half year to fit in with the rest of the data.
+
+
+##Task 3: Lifeboat
+_Fill these empty slots with a dummy value e.g. the string 'None' or 'NA'_
+
+```{r}
+titanic_table$boat
+summary(titanic_table$boat)      
+```
+
+We'll rewrite the levels for this column:
+```{r}
+fct =levels(titanic_table$boat)
+fct
+fct[1]='NA'
+titanic_table <- titanic_table %>%  
+                 mutate(boat = factor(boat, labels=fct))
+summary(titanic_table$boat) 
+```
+##Task 4: Cabin Numbers
+_You notice that many passengers don't have a cabin number associated with them. Create a new column has_cabin_numberwhich has 1 if there is a cabin number, and 0 otherwise._
+
+```{r}
+summary(titanic_table$cabin)
+```  
+
+```{r}
+titanic_table <-mutate( titanic_table,has_cabin_number = as.integer(cabin != ''))
+select(titanic_table,cabin, has_cabin_number)
+```
+Now save the cleaned table as a .csv.
+
+```{r}
+write.csv(titanic_table, file="titanic_clean.csv")
+```  
